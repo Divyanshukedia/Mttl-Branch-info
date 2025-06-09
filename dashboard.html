@@ -1,189 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Dashboard</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Firebase SDK (compatibility layer) -->
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-    <!-- jQuery CDN -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- DataTables CSS and JS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
-    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-    <style>
-        /* Custom styles for professional look */
-        .dataTable thead th {
-            background-color: #f9fafb;
-            font-weight: 600;
-            color: #374151;
-            border-bottom: 2px solid #e5e7eb;
-            padding: 12px 16px;
-        }
-        .dataTable tbody tr {
-            transition: background-color 0.2s;
-        }
-        .dataTable tbody tr:hover {
-            background-color: #f3f4f6;
-        }
-        /* DataTables custom styling */
-        .dataTables_wrapper .dataTables_length,
-        .dataTables_wrapper .dataTables_filter {
-            margin-bottom: 1.5rem;
-            color: #374151;
-        }
-        .dataTables_wrapper .dataTables_filter input {
-            border: 1px solid #e5e7eb;
-            border-radius: 0.375rem;
-            padding: 0.5rem;
-            width: 200px;
-        }
-        .dataTables_wrapper .dataTables_paginate .paginate_button {
-            padding: 0.5rem 1rem;
-            margin: 0 0.25rem;
-            border-radius: 0.375rem;
-            background-color: #f9fafb;
-            color: #374151;
-            border: 1px solid #e5e7eb;
-            transition: all 0.2s;
-        }
-        .dataTables_wrapper .dataTables_paginate .paginate_button.current,
-        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
-            background-color: #3b82f6;
-            color: white;
-            border-color: #3b82f6;
-        }
-        .dataTables_wrapper .dataTables_info {
-            color: #374151;
-            margin-top: 1rem;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Max Transtech Limited - PDF</title>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+  <!-- jsPDF + AutoTable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- PDFLib -->
+  <script src="https://unpkg.com/pdf-lib@1.17.0/dist/pdf-lib.min.js"></script>
 </head>
-<body class="bg-gray-50 min-h-screen font-sans">
-    <div class="container mx-auto p-6 w-full max-w-7xl">
-        <!-- Header Section -->
-        <header class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-900">Data Dashboard</h1>
-        </header>
+<body style="margin: 0; padding: 0;">
 
-        <!-- Data Table Section -->
-        <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-200">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-semibold text-gray-800">Branch Entries</h2>
-                <button id="downloadExcel" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition duration-150">Download as Excel</button>
-            </div>
-            <div class="overflow-x-auto">
-                <table id="dataTable" class="min-w-full dataTable">
-                    <thead>
-                        <tr>
-                            <th>STATION</th>
-                            <th>DISTRICT</th>
-                            <th>STATE</th>
-                            <th>ADDRESS</th>
-                            <th>NAME</th>
-                            <th>CONTACT NO</th>
-                            <th>EMAIL ID</th>
-                            <th>TYPE</th>
-                            <th>LATITUDE</th>
-                            <th>LONGITUDE</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+<iframe id="pdfViewer" style="width: 100vw; height: 100vh; border: none;"></iframe>
 
-    <script type="module">
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCKeLk5NX9bvBVhJfZhkZUATZQyrFNZDqU",
-            authDomain: "branch-information-335f6.firebaseapp.com",
-            projectId: "branch-information-335f6",
-            storageBucket: "branch-information-335f6.firebasestorage.app",
-            messagingSenderId: "1017170305224",
-            appId: "1:1017170305224:web:d8d84468e8d61d71ea45fd",
-            measurementId: "G-X6KYFQJ38Y"
-        };
+<script type="module">
+  const firebaseConfig = {
+    apiKey: "AIzaSyCKeLk5NX9bvBVhJfZhkZUATZQyrFNZDqU",
+    authDomain: "branch-information-335f6.firebaseapp.com",
+    projectId: "branch-information-335f6",
+    storageBucket: "branch-information-335f6.firebasestorage.app",
+    messagingSenderId: "1017170305224",
+    appId: "1:1017170305224:web:d8d84468e8d61d71ea45fd",
+    measurementId: "G-X6KYFQJ38Y"
+  };
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const { jsPDF } = window.jspdf;
 
-        // Load existing data into table
-        async function loadTableData() {
-            const tableBody = document.getElementById('tableBody');
-            tableBody.innerHTML = '';
-            const snapshot = await db.collection('entries').get();
-            const data = [];
-            snapshot.forEach(doc => {
-                const entry = doc.data();
-                data.push(entry);
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="px-4 py-3">${entry.station}</td>
-                    <td class="px-4 py-3">${entry.district}</td>
-                    <td class="px-4 py-3">${entry.state}</td>
-                    <td class="px-4 py-3">${entry.address}</td>
-                    <td class="px-4 py-3">${entry.name}</td>
-                    <td class="px-4 py-3">${entry.contact}</td>
-                    <td class="px-4 py-3">${entry.email}</td>
-                    <td class="px-4 py-3">${entry.type || 'N/A'}</td>
-                    <td class="px-4 py-3">${entry.location.latitude}</td>
-                    <td class="px-4 py-3">${entry.location.longitude}</td>
-                `;
-                tableBody.appendChild(row);
+  async function generateMergedPdf() {
+    const snapshot = await db.collection('entries').get();
+    const entries = snapshot.docs.map(doc => doc.data());
+
+    const mergedPdf = await PDFLib.PDFDocument.create();
+
+    const pdf1Bytes = await fetch('./pdf1.pdf').then(res => res.arrayBuffer());
+    const pdf1Doc = await PDFLib.PDFDocument.load(pdf1Bytes);
+    const pdf1Pages = await mergedPdf.copyPages(pdf1Doc, pdf1Doc.getPageIndices());
+    pdf1Pages.forEach(p => mergedPdf.addPage(p));
+
+                const doc = new jsPDF({
+                unit: 'mm',
+                format: [216, 297], // width, height in mm (custom size)
             });
 
-            // Initialize DataTables
-            if ($.fn.DataTable.isDataTable('#dataTable')) {
-                $('#dataTable').DataTable().destroy();
-            }
-            $('#dataTable').DataTable({
-                pageLength: 10,
-                searching: true,
-                ordering: true,
-                lengthMenu: [5, 10, 25, 50],
-                language: {
-                    search: "Search entries:",
-                    lengthMenu: "Show _MENU_ entries",
-                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                    paginate: {
-                        first: "First",
-                        last: "Last",
-                        next: "Next",
-                        previous: "Previous"
-                    }
-                }
-            });
+    const entriesByState = {};
+    entries.forEach(entry => {
+      if (!entriesByState[entry.state]) entriesByState[entry.state] = [];
+      entriesByState[entry.state].push(entry);
+    });
 
-            return data;
+    let first = true;
+    for (const state in entriesByState) {
+      const rows = entriesByState[state].map(e => [e.station, e.address, e.name, e.contact, e.type]);
+      if (!first) doc.addPage();
+      first = false;
+
+      doc.setFontSize(16);
+      doc.setFillColor(255, 193, 7);
+      doc.rect(10, 8, 190, 12, 'F');
+      doc.setTextColor(0);
+      doc.setFont("helvetica", "bold");
+      doc.text(`${state.toUpperCase()}: BOOKING AND DELIVERY OFFICES`, 105, 16, { align: 'center' });
+
+      doc.autoTable({
+        startY: 30,
+        head: [['STATION', 'ADDRESS', 'NAME', 'CONTACT NO', 'FACILITY TYPE']],
+        body: rows,
+        margin: { left: 10, right: 10 },
+        styles: {
+          fontSize: 8, cellPadding: 2, lineColor: [255, 193, 7], lineWidth: 0.3, halign: 'center'
+        },
+        headStyles: {
+          fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold',
+          lineColor: [255, 193, 7], lineWidth: 0.3, halign: 'center'
+        },
+        bodyStyles: {
+          fillColor: [255, 255, 255], textColor: [0, 0, 0], lineColor: [255, 193, 7],
+          lineWidth: 0.3, halign: 'center'
         }
+      });
+    }
 
-        // Download table as Excel
-        document.getElementById('downloadExcel').addEventListener('click', async function() {
-            const data = await loadTableData();
-            const worksheet = XLSX.utils.json_to_sheet(data.map(row => ({
-                STATION: row.station,
-                DISTRICT: row.district,
-                STATE: row.state,
-                ADDRESS: row.address,
-                NAME: row.name,
-                'CONTACT NO': row.contact,
-                'EMAIL ID': row.email,
-                TYPE: row.type || 'N/A',
-                LOCATION: `${row.location.latitude},${row.location.longitude}`
-            })));
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'Entries');
-            XLSX.writeFile(workbook, 'branch_entries.xlsx');
-        });
+    const tableBytes = doc.output('arraybuffer');
+    const tableDoc = await PDFLib.PDFDocument.load(tableBytes);
+    const tablePages = await mergedPdf.copyPages(tableDoc, tableDoc.getPageIndices());
+    tablePages.forEach(p => mergedPdf.addPage(p));
 
-        // Initial table load
-        loadTableData();
-    </script>
+    const pdf2Bytes = await fetch('./pdf2.pdf').then(res => res.arrayBuffer());
+    const pdf2Doc = await PDFLib.PDFDocument.load(pdf2Bytes);
+    const pdf2Pages = await mergedPdf.copyPages(pdf2Doc, pdf2Doc.getPageIndices());
+    pdf2Pages.forEach(p => mergedPdf.addPage(p));
+
+    return await mergedPdf.save();
+  }
+
+  // Render into iframe
+  async function init() {
+    const mergedPdfBytes = await generateMergedPdf();
+    const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    document.getElementById('pdfViewer').src = url;
+  }
+
+  init();
+</script>
+
 </body>
 </html>
