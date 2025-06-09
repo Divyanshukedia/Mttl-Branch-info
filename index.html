@@ -367,7 +367,7 @@
                         const sheet = workbook.Sheets[workbook.SheetNames[0]];
                         const json = XLSX.utils.sheet_to_json(sheet);
 
-                        const validTypes = ['Booking', 'Delivery', 'Booking and Delivery', 'BOOKING', 'DELIVERY', 'BOOKING AND DELIVERY'];
+                        const validTypes = ['Booking', 'Delivery', 'Booking and Delivery', 'BOOKING', 'DELIVERY', 'BOOKING AND DELIVERY', 'BOOKING & DELIVERY'];
                         for (const row of json) {
                             // Parse LOCATION column (comma-separated lat,long)
                             let latitude = 0;
@@ -402,7 +402,7 @@
                             };
 
                             // Validate required fields
-                            if (!formData.station || !formData.district || !formData.state || !formData.address || !formData.name || !formData.contact || !formData.email || !formData.type || !formData.location.latitude || !formData.location.longitude) {
+                            if (!formData.station || !formData.district || !formData.state || !formData.address || !formData.name || !formData.contact || !formData.type) {
                                 errors.push(`Excel: Missing or invalid fields in row: ${JSON.stringify(row)}`);
                                 continue;
                             }
