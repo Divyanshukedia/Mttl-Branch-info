@@ -50,13 +50,12 @@
       margin: 10px;
       font-size: 16px;
     }
-    /* Mobile-specific styles */
     @media only screen and (max-width: 768px) {
       #pdfViewer {
-        display: none; /* Hide iframe on mobile by default */
+        display: none;
       }
       #downloadButton {
-        display: block; /* Show download button on mobile */
+        display: block;
       }
     }
   </style>
@@ -107,22 +106,27 @@
           entriesByState[entry.state].push(entry);
         });
 
+        let currentY = 30;
         let first = true;
+
         for (const state in entriesByState) {
           const rows = entriesByState[state].map(e => [e.station, e.address, e.name, e.contact, e.type]);
-          if (!first) doc.addPage();
-          first = false;
+
+          if (!first && currentY + 50 > 270) {
+            doc.addPage();
+            currentY = 30;
+          }
 
           doc.setFontSize(16);
           doc.setFillColor(255, 193, 7);
-          doc.rect(10, 8, 190, 12, 'F');
+          doc.rect(10, currentY - 8, 190, 12, 'F');
           doc.setTextColor(0);
           doc.setFont("helvetica", "bold");
-          doc.text(`${state.toUpperCase()}: BOOKING AND DELIVERY OFFICES`, 105, 16, { align: 'center' });
+          doc.text(`${state.toUpperCase()}: BOOKING AND DELIVERY OFFICES`, 105, currentY, { align: 'center' });
           doc.setFont("helvetica", "normal");
 
           doc.autoTable({
-            startY: 30,
+            startY: currentY + 15, // Increased padding between header and table
             head: [['STATION', 'ADDRESS', 'NAME', 'CONTACT NO', 'FACILITY TYPE']],
             body: rows,
             margin: { left: 10, right: 10 },
@@ -136,8 +140,14 @@
             bodyStyles: {
               fillColor: [255, 255, 255], textColor: [0, 0, 0], lineColor: [255, 193, 7],
               lineWidth: 0.3, halign: 'center'
+            },
+            didDrawPage: (data) => {
+              currentY = data.cursor.y;
             }
           });
+
+          currentY += 20; // Spacing after the table (from previous request)
+          first = false;
         }
 
         const tableBytes = doc.output('arraybuffer');
@@ -178,17 +188,13 @@
         const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
         
-        // Try to display in iframe
         const pdfViewer = document.getElementById('pdfViewer');
         pdfViewer.src = url;
 
-        // Set up download button
         document.getElementById('downloadButton').addEventListener('click', () => downloadPdf(mergedPdfBytes));
 
-        // Detect mobile or app context
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         if (isMobile) {
-          // On mobile, trigger download automatically to ensure accessibility
           downloadPdf(mergedPdfBytes);
         }
       } catch (error) {
