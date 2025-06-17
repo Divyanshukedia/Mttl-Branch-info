@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Max Transtech Limited - PDF</title>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <!-- jsPDF + AutoTable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <!-- PDFLib -->
+  <script src="https://unpkg.com/pdf-lib@1.17.0/dist/pdf-lib.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-color: #f0f0f0;
+    }
+    #errorMessage {
+      color: red;
+      text-align: center;
+      margin: 10px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="errorMessage"></div>
+
+  <script type="module">
+    const firebaseConfig = {
+      apiKey: "AIzaSyCKeLk5NX9bvBVhJfZhkZUATZQyrFNZDqU",
+      authDomain: "branch-information-335f6.firebaseapp.com",
+      projectId: "branch-information-335f6",
+      storageBucket: "branch-information-335f6.firebasestorage.app",
+      messagingSenderId: "1017170305224",
+      appId: "1:1017170305224:web:d8d84468e8d61d71ea45fd",
+      measurementId: "G-X6KYFQJ38Y"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const { jsPDF } = window.jspdf;
+
+    async function generateMergedPdf() {
+      try {
+        const snapshot = await db.collection('entries').get();
+        const entries = snapshot.docs.map(doc => doc.data());
+
+        const mergedPdf = await PDFLib.PDFDocument.create();
+
+        // Fetch pdf1.pdf from the same folder
+        const pdf1Bytes = await fetch('./pdf1.pdf').then(res => {
+          if (!res.ok) throw new Error(`Failed to fetch pdf1.pdf: ${res.statusText}`);
+          return res.arrayBuffer();
+        });
+        const pdf1Doc = await PDFLib.PDFDocument.load(pdf1Bytes);
+        const pdf1Pages = await mergedPdf.copyPages(pdf1Doc, pdf1Doc.getPageIndices());
+        pdf1Pages.forEach(p => mergedPdf.addPage(p));
+
+        const doc = new jsPDF({
+          unit: 'mm',
+          format: [216, 297],
+        });
+
+        const entriesByState = {};
+        entries.forEach(entry => {
+          if (!entriesByState[entry.state]) entriesByState[entry.state] = [];
+          entriesByState[entry.state].push(entry);
+        });
+
+        let currentY = 30;
+        let first = true;
+
+        // Sort states alphabetically
+        const sortedStates = Object.keys(entriesByState).sort();
+
+        for (const state of sortedStates) {
+          // Sort entries by station within the state
+          const sortedEntries = entriesByState[state].sort((a, b) => 
+            a.station.localeCompare(b.station)
+          );
+          const rows = sortedEntries.map(e => [e.station, e.address, e.name, e.contact, e.type]);
+
+          if (!first && currentY + 50 > 270) {
+            doc.addPage();
+            currentY = 30;
+          }
+
+          doc.setFontSize(16);
+          doc.setFillColor(255, 193, 7);
+          doc.rect(10, currentY - 8, 190, 12, 'F');
+          doc.setTextColor(0);
+          doc.setFont("helvetica", "bold");
+          doc.text(`${state.toUpperCase()}: BOOKING AND DELIVERY OFFICES`, 105, currentY, { align: 'center' });
+          doc.setFont("helvetica", "normal");
+
+          doc.autoTable({
+            startY: currentY + 15,
+            head: [['STATION', 'ADDRESS', 'NAME', 'CONTACT NO', 'FACILITY TYPE']],
+            body: rows,
+            margin: { left: 10, right: 10 },
+            styles: {
+              fontSize: 8, cellPadding: 2, lineColor: [255, 193, 7], lineWidth: 0.3, halign: 'center'
+            },
+            headStyles: {
+              fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold',
+              lineColor: [255, 193, 7], lineWidth: 0.3, halign: 'center'
+            },
+            bodyStyles: {
+              fillColor: [255, 255, 255], textColor: [0, 0, 0], lineColor: [255, 193, 7],
+              lineWidth: 0.3, halign: 'center'
+            },
+            didDrawPage: (data) => {
+              currentY = data.cursor.y;
+            }
+          });
+
+          currentY += 20;
+          first = false;
+        }
+
+        const tableBytes = doc.output('arraybuffer');
+        const tableDoc = await PDFLib.PDFDocument.load(tableBytes);
+        const tablePages = await mergedPdf.copyPages(tableDoc, tableDoc.getPageIndices());
+        tablePages.forEach(p => mergedPdf.addPage(p));
+
+        // Fetch pdf2.pdf from the same folder
+        const pdf2Bytes = await fetch('./pdf2.pdf').then(res => {
+          if (!res.ok) throw new Error(`Failed to fetch pdf2.pdf: ${res.statusText}`);
+          return res.arrayBuffer();
+        });
+        const pdf2Doc = await PDFLib.PDFDocument.load(pdf2Bytes);
+        const pdf2Pages = await mergedPdf.copyPages(pdf2Doc, pdf2Doc.getPageIndices());
+        pdf2Pages.forEach(p => mergedPdf.addPage(p));
+
+        return await mergedPdf.save();
+      } catch (error) {
+        throw new Error(`Error generating PDF: ${error.message}`);
+      }
+    }
+
+    async function init() {
+      const errorMessage = document.getElementById('errorMessage');
+
+      try {
+        const mergedPdfBytes = await generateMergedPdf();
+        const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        
+        // Redirect to the PDF URL to open in the browser's PDF viewer
+        window.location.href = url;
+      } catch (error) {
+        console.error('Init error:', error);
+        errorMessage.textContent = `Error loading PDF: ${error.message}`;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
