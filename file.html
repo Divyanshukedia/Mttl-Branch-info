@@ -22,6 +22,7 @@
       justify-content: center;
       min-height: 100vh;
       background-color: #f0f0f0;
+      font-family: Arial, sans-serif;
     }
     #errorMessage {
       color: red;
@@ -29,10 +30,16 @@
       margin: 10px;
       font-size: 16px;
     }
+    #instruction {
+      text-align: center;
+      margin: 10px;
+      font-size: 16px;
+    }
   </style>
 </head>
 <body>
-  <div id="errorMessage"></div>
+  <div id="errorMessage">Generating PDF, please wait...</div>
+  <p id="instruction" style="display: none;">PDF is downloading. You can open it in Chrome, Safari, or a PDF viewer app.</p>
 
   <script type="module">
     const firebaseConfig = {
@@ -51,12 +58,17 @@
 
     async function generateMergedPdf() {
       try {
+        console.log('Fetching Firestore entries...');
         const snapshot = await db.collection('entries').get();
+        if (snapshot.empty) {
+          throw new Error('No entries found in Firestore');
+        }
         const entries = snapshot.docs.map(doc => doc.data());
+        console.log(`Fetched ${entries.length} entries`);
 
         const mergedPdf = await PDFLib.PDFDocument.create();
 
-        // Fetch pdf1.pdf from the same folder
+        console.log('Fetching pdf1.pdf...');
         const pdf1Bytes = await fetch('./pdf1.pdf').then(res => {
           if (!res.ok) throw new Error(`Failed to fetch pdf1.pdf: ${res.statusText}`);
           return res.arrayBuffer();
@@ -64,6 +76,7 @@
         const pdf1Doc = await PDFLib.PDFDocument.load(pdf1Bytes);
         const pdf1Pages = await mergedPdf.copyPages(pdf1Doc, pdf1Doc.getPageIndices());
         pdf1Pages.forEach(p => mergedPdf.addPage(p));
+        console.log('pdf1.pdf added');
 
         const doc = new jsPDF({
           unit: 'mm',
@@ -79,11 +92,9 @@
         let currentY = 30;
         let first = true;
 
-        // Sort states alphabetically
         const sortedStates = Object.keys(entriesByState).sort();
 
         for (const state of sortedStates) {
-          // Sort entries by station within the state
           const sortedEntries = entriesByState[state].sort((a, b) => 
             a.station.localeCompare(b.station)
           );
@@ -131,32 +142,51 @@
         const tableDoc = await PDFLib.PDFDocument.load(tableBytes);
         const tablePages = await mergedPdf.copyPages(tableDoc, tableDoc.getPageIndices());
         tablePages.forEach(p => mergedPdf.addPage(p));
+        console.log('Table pages added');
 
-        // Fetch pdf2.pdf from the same folder
+        console.log('Fetching pdf2.pdf...');
         const pdf2Bytes = await fetch('./pdf2.pdf').then(res => {
-          if (!res.ok) throw new Error(`Failed to fetch pdf2.pdf: ${res.statusText}`);
+          if (!res.ok) throw new Error(`Failed to fetch pdf2这就是你想要的PDF文件吗？2.pdf: ${res.statusText}`);
           return res.arrayBuffer();
         });
         const pdf2Doc = await PDFLib.PDFDocument.load(pdf2Bytes);
         const pdf2Pages = await mergedPdf.copyPages(pdf2Doc, pdf2Doc.getPageIndices());
         pdf2Pages.forEach(p => mergedPdf.addPage(p));
+        console.log('pdf2.pdf added');
 
-        return await mergedPdf.save();
+        const finalPdf = await mergedPdf.save();
+        console.log('PDF generated successfully');
+        return finalPdf;
       } catch (error) {
+        console.error('Generate PDF error:', error);
         throw new Error(`Error generating PDF: ${error.message}`);
       }
     }
 
     async function init() {
       const errorMessage = document.getElementById('errorMessage');
+      const instruction = document.getElementById('instruction');
 
       try {
+        console.log('Starting PDF generation...');
         const mergedPdfBytes = await generateMergedPdf();
         const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
-        
-        // Redirect to the PDF URL to open in the browser's PDF viewer
-        window.location.href = url;
+        console.log('Blob URL created:', url);
+
+        // Trigger automatic download
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `MaxTranstech_Offices_${new Date().toISOString().slice(0,10)}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        console.log('Download triggered');
+
+        // Show instruction
+        errorMessage.textContent = '';
+        instruction.style.display = 'block';
       } catch (error) {
         console.error('Init error:', error);
         errorMessage.textContent = `Error loading PDF: ${error.message}`;
