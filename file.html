@@ -35,11 +35,47 @@
       margin: 10px;
       font-size: 16px;
     }
+    #downloadLink {
+      padding: 12px 24px;
+      background-color: #16a34a;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 16px;
+      margin: 10px;
+      text-align: center;
+      display: none;
+    }
+    #downloadLink:hover {
+      background-color: #15803d;
+    }
+    #debugLogs {
+      width: 90%;
+      max-height: 200px;
+      overflow-y: auto;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin: 10px;
+      font-size: 12px;
+      color: #333;
+      text-align: left;
+      display: none;
+    }
+    #debugLogs p {
+      margin: 2px 0;
+      white-space: pre-wrap;
+    }
+    #debugLogs .error {
+      color: red;
+    }
   </style>
 </head>
 <body>
   <div id="errorMessage">Generating PDF, please wait...</div>
-  <p id="instruction" style="display: none;">PDF is downloading. You can open it in Chrome, Safari, or a PDF viewer app.</p>
+  <p id="instruction" style="display: none;">PDF is downloading. If the download doesn’t start, tap the button below to download it manually and open in Chrome, Safari, or a PDF viewer app.</p>
+  <a id="downloadLink" href="#" download>Download PDF Manually</a>
+  <div id="debugLogs"></div>
 
   <script type="module">
     const firebaseConfig = {
@@ -56,19 +92,30 @@
     const db = firebase.firestore();
     const { jsPDF } = window.jspdf;
 
+    // Function to append debug/error logs to screen
+    function appendLog(message, isError = false) {
+      const debugLogs = document.getElementById('debugLogs');
+      debugLogs.style.display = 'block';
+      const logEntry = document.createElement('p');
+      logEntry.textContent = `[${new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })}] ${message}`;
+      if (isError) logEntry.classList.add('error');
+      debugLogs.appendChild(logEntry);
+      debugLogs.scrollTop = debugLogs.scrollHeight; // Auto-scroll to latest log
+    }
+
     async function generateMergedPdf() {
       try {
-        console.log('Fetching Firestore entries...');
+        appendLog('Fetching Firestore entries...');
         const snapshot = await db.collection('entries').get();
         if (snapshot.empty) {
           throw new Error('No entries found in Firestore');
         }
         const entries = snapshot.docs.map(doc => doc.data());
-        console.log(`Fetched ${entries.length} entries`);
+        appendLog(`Fetched ${entries.length} entries`);
 
         const mergedPdf = await PDFLib.PDFDocument.create();
 
-        console.log('Fetching pdf1.pdf...');
+        appendLog('Fetching pdf1.pdf...');
         const pdf1Bytes = await fetch('./pdf1.pdf').then(res => {
           if (!res.ok) throw new Error(`Failed to fetch pdf1.pdf: ${res.statusText}`);
           return res.arrayBuffer();
@@ -76,7 +123,7 @@
         const pdf1Doc = await PDFLib.PDFDocument.load(pdf1Bytes);
         const pdf1Pages = await mergedPdf.copyPages(pdf1Doc, pdf1Doc.getPageIndices());
         pdf1Pages.forEach(p => mergedPdf.addPage(p));
-        console.log('pdf1.pdf added');
+        appendLog('pdf1.pdf added');
 
         const doc = new jsPDF({
           unit: 'mm',
@@ -142,54 +189,70 @@
         const tableDoc = await PDFLib.PDFDocument.load(tableBytes);
         const tablePages = await mergedPdf.copyPages(tableDoc, tableDoc.getPageIndices());
         tablePages.forEach(p => mergedPdf.addPage(p));
-        console.log('Table pages added');
+        appendLog('Table pages added');
 
-        console.log('Fetching pdf2.pdf...');
+        appendLog('Fetching pdf2.pdf...');
         const pdf2Bytes = await fetch('./pdf2.pdf').then(res => {
-          if (!res.ok) throw new Error(`Failed to fetch pdf2这就是你想要的PDF文件吗？2.pdf: ${res.statusText}`);
+          if (!res.ok) throw new Error(`Failed to fetch pdf2.pdf: ${res.statusText}`);
           return res.arrayBuffer();
         });
         const pdf2Doc = await PDFLib.PDFDocument.load(pdf2Bytes);
         const pdf2Pages = await mergedPdf.copyPages(pdf2Doc, pdf2Doc.getPageIndices());
         pdf2Pages.forEach(p => mergedPdf.addPage(p));
-        console.log('pdf2.pdf added');
+        appendLog('pdf2.pdf added');
 
         const finalPdf = await mergedPdf.save();
-        console.log('PDF generated successfully');
+        appendLog('PDF generated successfully');
         return finalPdf;
       } catch (error) {
-        console.error('Generate PDF error:', error);
-        throw new Error(`Error generating PDF: ${error.message}`);
+        appendLog(`Error generating PDF: ${error.message}`, true);
+        throw error;
       }
     }
 
     async function init() {
       const errorMessage = document.getElementById('errorMessage');
       const instruction = document.getElementById('instruction');
+      const downloadLink = document.getElementById('downloadLink');
 
       try {
-        console.log('Starting PDF generation...');
+        appendLog('Starting PDF generation...');
         const mergedPdfBytes = await generateMergedPdf();
         const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
-        console.log('Blob URL created:', url);
+        appendLog(`Blob URL created: ${url}`);
 
-        // Trigger automatic download
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `MaxTranstech_Offices_${new Date().toISOString().slice(0,10)}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        console.log('Download triggered');
+        // Attempt automatic download
+        try {
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `MaxTranstech_Offices_${new Date().toISOString().slice(0,10)}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          appendLog('Automatic download triggered');
+        } catch (e) {
+          appendLog(`Automatic download failed: ${e.message}`, true);
+        }
 
-        // Show instruction
+        // Show instruction and manual download link
         errorMessage.textContent = '';
         instruction.style.display = 'block';
+        downloadLink.href = url;
+        downloadLink.download = `MaxTranstech_Offices_${new Date().toISOString().slice(0,10)}.pdf`;
+        downloadLink.style.display = 'inline-block';
+        appendLog('Manual download link displayed');
+
+        // Delay revokeObjectURL to ensure download completes
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+          appendLog('Blob URL revoked');
+        }, 10000); // 10 seconds delay
       } catch (error) {
-        console.error('Init error:', error);
+        appendLog(`Init error: ${error.message}`, true);
         errorMessage.textContent = `Error loading PDF: ${error.message}`;
+        instruction.style.display = 'none';
+        downloadLink.style.display = 'none';
       }
     }
 
