@@ -424,7 +424,7 @@
                                 contact: String(row['CONTACT NO'] || row['contact no'] || row.CONTACT || row.contact || '').trim(),
                                 email: String(row['EMAIL ID'] || row['email id'] || row.EMAIL || row.email || '').trim(),
                                 type: typeValue,
-                                location: { latitude, longitude },
+                                // location: { latitude, longitude },
                                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
                             };
 
