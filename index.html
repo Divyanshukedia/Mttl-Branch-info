@@ -4,35 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Data Entry Dashboard</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Firebase SDK (compatibility layer) -->
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- DataTables Bootstrap 5 CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-    <!-- SheetJS for Excel handling -->
+    <!-- SheetJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- jQuery CDN -->
+    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- DataTables CSS and JS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-    <!-- Heroicons CDN -->
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <!-- Heroicons (for edit/delete icons) -->
     <script src="https://unpkg.com/@heroicons/vue@2.1.5/dist/outline.js"></script>
     <style>
-        /* Custom styles for input focus and professional look */
-        input:focus, select:focus, button:focus {
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-        }
-        .dataTable thead th {
-            background-color: #f9fafb;
-            font-weight: 600;
-            color: #374151;
-            border-bottom: 2px solid #e5e7eb;
-        }
-        .dataTable tbody tr:hover {
-            background-color: #f3f4f6;
-        }
+        /* Minimal custom CSS */
         .error {
             color: #dc2626;
             font-size: 0.875rem;
@@ -42,105 +33,100 @@
             width: 20px;
             height: 20px;
             cursor: pointer;
-            transition: color 0.2s;
-        }
-        /* DataTables custom styling */
-        .dataTables_wrapper .dataTables_length,
-        .dataTables_wrapper .dataTables_filter {
-            margin-bottom: 1rem;
-        }
-        .dataTables_wrapper .dataTables_paginate .paginate_button {
-            padding: 0.5rem 1rem;
-            margin: 0 0.25rem;
-            border-radius: 0.375rem;
-            background-color: #f9fafb;
-            color: #374151;
-            border: 1px solid #e5e7eb;
-        }
-        .dataTables_wrapper .dataTables_paginate .paginate_button.current,
-        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
-            background-color: #3b82f6;
-            color: white;
-            border-color: #3b82f6;
         }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen font-sans">
-    <div class="container mx-auto p-6 w-full max-w-7xl">
-        <h1 class="text-3xl font-bold text-gray-900 mb-8">Data Entry Dashboard</h1>
+<body>
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 fw-bold">Data Entry Dashboard</h1>
+            <button id="addBranchButton" class="btn btn-primary">Add Branch</button>
+        </div>
 
-        <!-- Form and Excel Upload Section -->
-        <div class="bg-white p-8 rounded-xl shadow-lg mb-8 border border-gray-200">
-            <h2 class="text-2xl font-semibold text-gray-800 mb-6">Add New Entry</h2>
-            <form id="dataForm" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <input type="hidden" id="editDocId" name="editDocId">
-                <div>
-                    <label for="station" class="block text-sm font-medium text-gray-700">STATION</label>
-                    <input type="text" id="station" name="station" class="mt-1 block w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 transition duration-150">
-                    <p id="stationError" class="error hidden">Station already exists</p>
+        <!-- Modal for Add/Edit Form -->
+        <div class="modal fade" id="dataModal" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalTitle">Add New Entry</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="dataForm">
+                            <input type="hidden" id="editDocId" name="editDocId">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="station" class="form-label">STATION</label>
+                                    <input type="text" id="station" name="station" class="form-control">
+                                    <p id="stationError" class="error d-none">Station already exists</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="district" class="form-label">DISTRICT</label>
+                                    <input type="text" id="district" name="district" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="state" class="form-label">STATE</label>
+                                    <input type="text" id="state" name="state" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="address" class="form-label">ADDRESS</label>
+                                    <input type="text" id="address" name="address" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="name" class="form-label">NAME</label>
+                                    <input type="text" id="name" name="name" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="contact" class="form-label">CONTACT NO</label>
+                                    <input type="tel" id="contact" name="contact" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="email" class="form-label">EMAIL ID</label>
+                                    <input type="email" id="email" name="email" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="type" class="form-label">TYPE</label>
+                                    <select id="type" name="type" class="form-select">
+                                        <option value="" disabled selected>Select Type</option>
+                                        <option value="Booking">Booking</option>
+                                        <option value="Delivery">Delivery</option>
+                                        <option value="Booking & Delivery">Booking & Delivery</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="latitude" class="form-label">LATITUDE</label>
+                                    <input type="number" step="any" id="latitude" name="latitude" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="longitude" class="form-label">LONGITUDE</label>
+                                    <input type="number" step="any" id="longitude" name="longitude" class="form-control">
+                                </div>
+                                <div class="col-12">
+                                    <hr class="my-4">
+                                    <p class="text-center text-muted mb-3">OR</p>
+                                    <label for="excelUpload" class="form-label">Upload Excel File</label>
+                                    <input type="file" id="excelUpload" accept=".xlsx, .xls" class="form-control">
+                                    <p id="uploadStatus" class="mt-2 text-muted"></p>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end mt-4">
+                                <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" id="submitButton" class="btn btn-primary">Submit</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-                <div>
-                    <label for="district" class="block text-sm font-medium text-gray-700">DISTRICT</label>
-                    <input type="text" id="district" name="district" class="mt-1 block w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 transition duration-150">
-                </div>
-                <div>
-                    <label for="state" class="block text-sm font-medium text-gray-700">STATE</label>
-                    <input type="text" id="state" name="state" class="mt-1 block w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 transition duration-150">
-                </div>
-                <div class="lg:col-span-2">
-                    <label for="address" class="block text-sm font-medium text-gray-700">ADDRESS</label>
-                    <input type="text" id="address" name="address" class="mt-1 block w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 transition duration-150">
-                </div>
-                <div>
-                    <label for="name" class="block text-sm font-medium text-gray-700">NAME</label>
-                    <input type="text" id="name" name="name" class="mt-1 block w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 transition duration-150">
-                </div>
-                <div>
-                    <label for="contact" class="block text-sm font-medium text-gray-700">CONTACT NO</label>
-                    <input type="tel" id="contact" name="contact" class="mt-1 block w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 transition duration-150">
-                </div>
-                <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700">EMAIL ID</label>
-                    <input type="email" id="email" name="email" class="mt-1 block w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 transition duration-150">
-                </div>
-                <div>
-                    <label for="type" class="block text-sm font-medium text-gray-700">TYPE</label>
-                    <select id="type" name="type" class="mt-1 block w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 transition duration-150">
-                        <option value="" disabled selected>Select Type</option>
-                        <option value="Booking">Booking</option>
-                        <option value="Delivery">Delivery</option>
-                        <option value="Booking and Delivery">Booking and Delivery</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="latitude" class="block text-sm font-medium text-gray-700">LATITUDE</label>
-                    <input type="number" step="any" id="latitude" name="latitude" class="mt-1 block w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 transition duration-150">
-                </div>
-                <div>
-                    <label for="longitude" class="block text-sm font-medium text-gray-700">LONGITUDE</label>
-                    <input type="number" step="any" id="longitude" name="longitude" class="mt-1 block w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 transition duration-150">
-                </div>
-                <div class="lg:col-span-2">
-                    <hr class="my-6 border-gray-200">
-                    <p class="text-center text-sm font-medium text-gray-600 mb-4">OR</p>
-                    <label for="excelUpload" class="block text-sm font-medium text-gray-700">Upload Excel File</label>
-                    <input type="file" id="excelUpload" accept=".xlsx, .xls" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition duration-150">
-                    <p id="uploadStatus" class="mt-2 text-sm text-gray-600"></p>
-                </div>
-                <div class="lg:col-span-2 flex justify-end">
-                    <button type="submit" id="submitButton" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-150">Submit</button>
-                </div>
-            </form>
+            </div>
         </div>
 
         <!-- Data Table Section -->
-        <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-200">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-semibold text-gray-800">Existing Entries</h2>
-                <button id="downloadExcel" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition duration-150">Download as Excel</button>
-            </div>
-            <div class="overflow-x-auto">
-                <table id="dataTable" class="min-w-full dataTable">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 fw-bold">Existing Entries</h2>
+                    <button id="downloadExcel" class="btn btn-success">Download as Excel</button>
+                </div>
+                <table id="dataTable" class="table table-striped">
                     <thead>
                         <tr>
                             <th>STATION</th>
@@ -165,18 +151,61 @@
     <script type="module">
         // Firebase Configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyCKeLk5NX9bvBVhJfZhkZUATZQyrFNZDqU",
-            authDomain: "branch-information-335f6.firebaseapp.com",
-            projectId: "branch-information-335f6",
-            storageBucket: "branch-information-335f6.firebasestorage.app",
-            messagingSenderId: "1017170305224",
-            appId: "1:1017170305224:web:d8d84468e8d61d71ea45fd",
-            measurementId: "G-X6KYFQJ38Y"
+            apiKey: "AIzaSyCNUR1sWFPtIurhQRIuujhhSboRoRJvulQ",
+            authDomain: "mttl-brochure.firebaseapp.com",
+            projectId: "mttl-brochure",
+            storageBucket: "mttl-brochure.firebasestorage.app",
+            messagingSenderId: "161005945772",
+            appId: "1:161005945772:web:e0112b09967491658e3009",
+            measurementId: "G-2692HWWKPW"
         };
 
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+
+        // Modal control
+        const modal = new bootstrap.Modal(document.getElementById('dataModal'));
+        const modalTitle = document.getElementById('modalTitle');
+        const submitButton = document.getElementById('submitButton');
+
+        function openModal(mode = 'add', data = null) {
+            if (mode === 'edit' && data) {
+                modalTitle.textContent = 'Edit Entry';
+                document.getElementById('editDocId').value = data.docId;
+                document.getElementById('station').value = data.station;
+                document.getElementById('district').value = data.district;
+                document.getElementById('state').value = data.state;
+                document.getElementById('address').value = data.address;
+                document.getElementById('name').value = data.name;
+                document.getElementById('contact').value = data.contact;
+                document.getElementById('email').value = data.email;
+                document.getElementById('type').value = data.type;
+                document.getElementById('latitude').value = data.location.latitude;
+                document.getElementById('longitude').value = data.location.longitude;
+                submitButton.textContent = 'Update';
+                submitButton.classList.remove('btn-primary');
+                submitButton.classList.add('btn-success');
+            } else {
+                modalTitle.textContent = 'Add New Entry';
+                document.getElementById('dataForm').reset();
+                document.getElementById('editDocId').value = '';
+                submitButton.textContent = 'Submit';
+                submitButton.classList.remove('btn-success');
+                submitButton.classList.add('btn-primary');
+                document.getElementById('stationError').classList.add('d-none');
+            }
+            modal.show();
+        }
+
+        function closeModal() {
+            modal.hide();
+            document.getElementById('dataForm').reset();
+            document.getElementById('uploadStatus').textContent = '';
+            document.getElementById('stationError').classList.add('d-none');
+        }
+
+        document.getElementById('addBranchButton').addEventListener('click', () => openModal('add'));
 
         // Load existing data into table
         async function loadTableData() {
@@ -190,23 +219,23 @@
                 data.push({ ...entry, docId });
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td class="px-4 py-3">${entry.station}</td>
-                    <td class="px-4 py-3">${entry.district}</td>
-                    <td class="px-4 py-3">${entry.state}</td>
-                    <td class="px-4 py-3">${entry.address}</td>
-                    <td class="px-4 py-3">${entry.name}</td>
-                    <td class="px-4 py-3">${entry.contact}</td>
-                    <td class="px-4 py-3">${entry.email}</td>
-                    <td class="px-4 py-3">${entry.type || 'N/A'}</td>
-                    <td class="px-4 py-3">${entry.location.latitude}</td>
-                    <td class="px-4 py-3">${entry.location.longitude}</td>
-                    <td class="px-4 py-3 action-icons">
-                        <span class="inline-block mr-3 text-blue-600 hover:text-blue-800" data-id="${docId}" data-action="edit">
+                    <td>${entry.station}</td>
+                    <td>${entry.district}</td>
+                    <td>${entry.state}</td>
+                    <td>${entry.address}</td>
+                    <td>${entry.name}</td>
+                    <td>${entry.contact}</td>
+                    <td>${entry.email}</td>
+                    <td>${entry.type || 'N/A'}</td>
+                    <td>${entry.location.latitude}</td>
+                    <td>${entry.location.longitude}</td>
+                    <td class="action-icons">
+                        <span class="text-primary me-2" data-id="${docId}" data-action="edit">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                             </svg>
                         </span>
-                        <span class="inline-block text-red-600 hover:text-red-800" data-id="${docId}" data-action="delete">
+                        <span class="text-danger" data-id="${docId}" data-action="delete">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
@@ -226,7 +255,7 @@
                 ordering: true,
                 lengthMenu: [5, 10, 25, 50],
                 columnDefs: [
-                    { orderable: false, targets: -1 } // Disable sorting on Action column
+                    { orderable: false, targets: -1 }
                 ],
                 language: {
                     search: "Search entries:",
@@ -234,31 +263,13 @@
                 }
             });
 
-            // Re-attach event listeners after DataTable initialization
+            // Re-attach event listeners
             document.querySelectorAll('[data-action="edit"]').forEach(button => {
                 button.addEventListener('click', async (e) => {
                     const docId = e.target.closest('[data-id]').dataset.id;
                     const doc = await db.collection('entries').doc(docId).get();
-                    const data = doc.data();
-
-                    // Populate form
-                    document.getElementById('editDocId').value = docId;
-                    document.getElementById('station').value = data.station;
-                    document.getElementById('district').value = data.district;
-                    document.getElementById('state').value = data.state;
-                    document.getElementById('address').value = data.address;
-                    document.getElementById('name').value = data.name;
-                    document.getElementById('contact').value = data.contact;
-                    document.getElementById('email').value = data.email;
-                    document.getElementById('type').value = data.type;
-                    document.getElementById('latitude').value = data.location.latitude;
-                    document.getElementById('longitude').value = data.location.longitude;
-
-                    // Change button to Update
-                    const submitButton = document.getElementById('submitButton');
-                    submitButton.textContent = 'Update';
-                    submitButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-                    submitButton.classList.add('bg-green-600', 'hover:bg-green-700');
+                    const data = { ...doc.data(), docId };
+                    openModal('edit', data);
                 });
             });
 
@@ -280,13 +291,26 @@
             return data;
         }
 
-        // Check if station is unique (case-insensitive), excluding current docId if editing
-        async function isStationUnique(station, excludeDocId = null) {
+        // Check if station exists and get its docId
+        async function getStationDocId(station) {
+            if (!station) return null;
             const snapshot = await db.collection('entries').get();
-            return !snapshot.docs.some(doc => {
-                if (excludeDocId && doc.id === excludeDocId) return false;
-                return doc.data().station.toLowerCase() === station.toLowerCase();
+            for (const doc of snapshot.docs) {
+                if (doc.data().station.toLowerCase() === station.toLowerCase()) {
+                    return doc.id;
+                }
+            }
+            return null;
+        }
+
+        // Delete all entries in Firestore
+        async function deleteAllEntries() {
+            const snapshot = await db.collection('entries').get();
+            const batch = db.batch();
+            snapshot.forEach(doc => {
+                batch.delete(doc.ref);
             });
+            await batch.commit();
         }
 
         // Form and Excel submission
@@ -296,67 +320,54 @@
             uploadStatus.textContent = 'Processing...';
             let errors = [];
             let successes = [];
+            let formSubmitted = false;
 
-            // Process form data if filled
+            // Process form data
             const editDocId = document.getElementById('editDocId').value;
-            const station = document.getElementById('station').value;
-            const district = document.getElementById('district').value;
-            const state = document.getElementById('state').value;
-            const address = document.getElementById('address').value;
-            const name = document.getElementById('name').value;
-            const contact = document.getElementById('contact').value;
-            const email = document.getElementById('email').value;
+            const station = document.getElementById('station').value.trim();
+            const district = document.getElementById('district').value.trim();
+            const state = document.getElementById('state').value.trim();
+            const address = document.getElementById('address').value.trim();
+            const name = document.getElementById('name').value.trim();
+            const contact = document.getElementById('contact').value.trim();
+            const email = document.getElementById('email').value.trim();
             const type = document.getElementById('type').value;
             const latitude = document.getElementById('latitude').value;
             const longitude = document.getElementById('longitude').value;
             const stationError = document.getElementById('stationError');
 
-            if (station && district && state && address && name && contact && email && type && latitude && longitude) {
-                // Check station uniqueness
-                if (!(await isStationUnique(station, editDocId))) {
-                    stationError.classList.remove('hidden');
+            if (station && district && state) {
+                const existingDocId = await getStationDocId(station);
+                if (existingDocId && existingDocId !== editDocId) {
+                    stationError.classList.remove('d-none');
                     errors.push(`Form: Station "${station}" already exists`);
                 } else {
-                    stationError.classList.add('hidden');
+                    stationError.classList.add('d-none');
                     const formData = {
-                        station: station,
-                        district: district,
-                        state: state,
-                        address: address,
-                        name: name,
-                        contact: contact,
-                        email: email,
-                        type: type,
-                        location: {
-                            latitude: parseFloat(latitude),
-                            longitude: parseFloat(longitude)
-                        },
+                        station, district, state, address, name, contact, email, type,
+                        location: { latitude: parseFloat(latitude), longitude: parseFloat(longitude) },
                         timestamp: firebase.firestore.FieldValue.serverTimestamp()
                     };
 
                     try {
                         if (editDocId) {
-                            // Update existing entry
                             await db.collection('entries').doc(editDocId).set(formData, { merge: true });
                             successes.push('Form data updated successfully!');
-                            document.getElementById('editDocId').value = '';
-                            const submitButton = document.getElementById('submitButton');
-                            submitButton.textContent = 'Submit';
-                            submitButton.classList.remove('bg-green-600', 'hover:bg-green-700');
-                            submitButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                            closeModal();
                         } else {
-                            // Add new entry
                             await db.collection('entries').add(formData);
                             successes.push('Form data saved successfully!');
+                            closeModal();
                         }
-                        document.getElementById('dataForm').reset();
+                        formSubmitted = true;
+                        await loadTableData();
                     } catch (error) {
                         errors.push(`Form: Error saving data: ${error.message}`);
                     }
                 }
             }
 
-            // Process Excel file if selected
+            // Process Excel file
             const excelFile = document.getElementById('excelUpload').files[0];
             if (excelFile) {
                 const reader = new FileReader();
@@ -367,9 +378,26 @@
                         const sheet = workbook.Sheets[workbook.SheetNames[0]];
                         const json = XLSX.utils.sheet_to_json(sheet);
 
-                        const validTypes = ['Booking', 'Delivery', 'Booking and Delivery', 'BOOKING', 'DELIVERY', 'BOOKING AND DELIVERY', 'BOOKING & DELIVERY'];
+                        // Delete all existing entries
+                        try {
+                            await deleteAllEntries();
+                            successes.push('All existing entries deleted successfully.');
+                        } catch (error) {
+                            errors.push(`Excel: Error deleting existing entries: ${error.message}`);
+                        }
+
+                        const typeMap = {
+                            'B': 'Booking',
+                            'D': 'Delivery',
+                            'B/D': 'Booking & Delivery'
+                        };
+                        const validTypes = [
+                            'Booking', 'Delivery', 'Booking & Delivery',
+                            'BOOKING', 'DELIVERY', 'BOOKING AND DELIVERY', 'BOOKING & DELIVERY',
+                            'B', 'D', 'B/D'
+                        ];
+
                         for (const row of json) {
-                            // Parse LOCATION column (comma-separated lat,long)
                             let latitude = 0;
                             let longitude = 0;
                             const location = String(row.LOCATION || row.location || '');
@@ -384,71 +412,62 @@
                                 }
                             }
 
-                            // Map Excel columns to form fields (case-insensitive)
+                            let typeValue = String(row.TYPE || row.type || '').trim();
+                            typeValue = typeMap[typeValue] || typeValue;
+
                             const formData = {
-                                station: row.STATION || row.station || '',
-                                district: row.DISTRICT || row.district || '',
-                                state: row.STATE || row.state || '',
-                                address: row.ADDRESS || row.address || '',
-                                name: row.NAME || row.name || '',
-                                contact: row['CONTACT NO'] || row['contact no'] || row.CONTACT || row.contact || '',
-                                email: row['EMAIL ID'] || row['email id'] || row.EMAIL || row.email || '',
-                                type: row.TYPE || row.type || '',
-                                location: {
-                                    latitude: latitude,
-                                    longitude: longitude
-                                },
+                                station: String(row.STATION || row.station || '').trim(),
+                                district: String(row.DISTRICT || row.district || '').trim(),
+                                state: String(row.STATE || row.state || '').trim(),
+                                address: String(row.ADDRESS || row.address || '').trim(),
+                                name: String(row.NAME || row.name || '').trim(),
+                                contact: String(row['CONTACT NO'] || row['contact no'] || row.CONTACT || row.contact || '').trim(),
+                                email: String(row['EMAIL ID'] || row['email id'] || row.EMAIL || row.email || '').trim(),
+                                type: typeValue,
+                                location: { latitude, longitude },
                                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
                             };
 
-                            // Validate required fields
-                            if (!formData.station || !formData.district || !formData.state || !formData.address || !formData.name || !formData.contact || !formData.type) {
+                            if (!formData.station || !formData.district || !formData.state) {
                                 errors.push(`Excel: Missing or invalid fields in row: ${JSON.stringify(row)}`);
                                 continue;
                             }
                             if (!validTypes.includes(formData.type)) {
-                                errors.push(`Excel: Invalid type in row: ${formData.type}. Must be one of: Booking, Delivery, Booking and Delivery, BOOKING, DELIVERY, BOOKING AND DELIVERY`);
-                                continue;
-                            }
-                            // Skip duplicate stations silently
-                            if (!(await isStationUnique(formData.station))) {
+                                errors.push(`Excel: Invalid type in row: ${formData.type}. Must be one of: Booking, Delivery, Booking & Delivery, BOOKING, DELIVERY, BOOKING AND DELIVERY, B, D, B/D`);
                                 continue;
                             }
 
-                            // Save to Firestore
                             try {
                                 await db.collection('entries').add(formData);
-                                successes.push(`Excel: Row for station "${formData.station}" saved successfully!`);
+                                successes.push(`Excel: Added station "${formData.station}"`);
                             } catch (error) {
                                 errors.push(`Excel: Error saving row for station "${formData.station}": ${error.message}`);
                             }
                         }
 
-                        // Update status
                         if (errors.length > 0) {
                             uploadStatus.textContent = `Submission completed with errors:\n${errors.join('\n')}`;
                         } else if (successes.length > 0) {
                             uploadStatus.textContent = `Submission successful:\n${successes.join('\n')}`;
+                            closeModal();
                         } else {
-                            uploadStatus.textContent = 'No data submitted. Please fill the form or select an Excel file.';
+                            uploadStatus.textContent = 'No valid data submitted from Excel file.';
                         }
                         await loadTableData();
-                        document.getElementById('excelUpload').value = ''; // Reset file input
+                        document.getElementById('excelUpload').value = '';
                     } catch (error) {
                         uploadStatus.textContent = `Excel: Error processing file: ${error.message}`;
                     }
                 };
                 reader.readAsArrayBuffer(excelFile);
+            } else if (!formSubmitted) {
+                // Show error only if neither form nor Excel was submitted
+                uploadStatus.textContent = 'No data submitted. Please fill the form or select an Excel file.';
             } else {
-                // Update status if no Excel file but form processed
-                if (errors.length > 0) {
-                    uploadStatus.textContent = `Submission completed with errors:\n${errors.join('\n')}`;
-                } else if (successes.length > 0) {
-                    uploadStatus.textContent = `Submission successful:\n${successes.join('\n')}`;
-                } else {
-                    uploadStatus.textContent = 'No data submitted. Please fill the form or select an Excel file.';
-                }
-                await loadTableData();
+                // Form was submitted successfully, show successes/errors
+                uploadStatus.textContent = errors.length > 0 
+                    ? `Submission completed with errors:\n${errors.join('\n')}`
+                    : `Submission successful:\n${successes.join('\n')}`;
             }
         });
 

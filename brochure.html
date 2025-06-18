@@ -22,27 +22,7 @@
       justify-content: center;
       min-height: 100vh;
       background-color: #f0f0f0;
-    }
-    #pdfViewer {
-      width: 100%;
-      height: 100vh;
-      border: none;
-      display: block;
-    }
-    #downloadButton {
-      display: none;
-      padding: 12px 24px;
-      background-color: #16a34a;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
-      margin: 10px;
-      text-align: center;
-    }
-    #downloadButton:hover {
-      background-color: #15803d;
+      font-family: Arial, sans-serif;
     }
     #errorMessage {
       color: red;
@@ -50,30 +30,26 @@
       margin: 10px;
       font-size: 16px;
     }
-    @media only screen and (max-width: 768px) {
-      #pdfViewer {
-        display: none;
-      }
-      #downloadButton {
-        display: block;
-      }
+    #instruction {
+      text-align: center;
+      margin: 10px;
+      font-size: 16px;
     }
   </style>
 </head>
 <body>
-  <iframe id="pdfViewer"></iframe>
-  <button id="downloadButton">Download PDF</button>
-  <div id="errorMessage"></div>
+  <div id="errorMessage">Generating PDF, please wait...</div>
+  <p id="instruction" style="display: none;">PDF is downloading. You can open it in Chrome, Safari, or a PDF viewer app.</p>
 
   <script type="module">
     const firebaseConfig = {
-      apiKey: "AIzaSyCKeLk5NX9bvBVhJfZhkZUATZQyrFNZDqU",
-      authDomain: "branch-information-335f6.firebaseapp.com",
-      projectId: "branch-information-335f6",
-      storageBucket: "branch-information-335f6.firebasestorage.app",
-      messagingSenderId: "1017170305224",
-      appId: "1:1017170305224:web:d8d84468e8d61d71ea45fd",
-      measurementId: "G-X6KYFQJ38Y"
+      apiKey: "AIzaSyCNUR1sWFPtIurhQRIuujhhSboRoRJvulQ",
+      authDomain: "mttl-brochure.firebaseapp.com",
+      projectId: "mttl-brochure",
+      storageBucket: "mttl-brochure.firebasestorage.app",
+      messagingSenderId: "161005945772",
+      appId: "1:161005945772:web:e0112b09967491658e3009",
+      measurementId: "G-2692HWWKPW"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -82,18 +58,25 @@
 
     async function generateMergedPdf() {
       try {
+        console.log('Fetching Firestore entries...');
         const snapshot = await db.collection('entries').get();
+        if (snapshot.empty) {
+          throw new Error('No entries found in Firestore');
+        }
         const entries = snapshot.docs.map(doc => doc.data());
+        console.log(`Fetched ${entries.length} entries`);
 
         const mergedPdf = await PDFLib.PDFDocument.create();
 
-        const pdf1Bytes = await fetch('./pdf1.pdf').then(res => {
-          if (!res.ok) throw new Error(`Failed to fetch pdf1.pdf: ${res.statusText}`);
+        console.log('Fetching front_page_brochure.pdf...');
+        const front_page_brochureBytes = await fetch('./front_page_brochure.pdf').then(res => {
+          if (!res.ok) throw new Error(`Failed to fetch front_page_brochure.pdf: ${res.statusText}`);
           return res.arrayBuffer();
         });
-        const pdf1Doc = await PDFLib.PDFDocument.load(pdf1Bytes);
-        const pdf1Pages = await mergedPdf.copyPages(pdf1Doc, pdf1Doc.getPageIndices());
-        pdf1Pages.forEach(p => mergedPdf.addPage(p));
+        const front_page_brochureDoc = await PDFLib.PDFDocument.load(front_page_brochureBytes);
+        const front_page_brochurePages = await mergedPdf.copyPages(front_page_brochureDoc, front_page_brochureDoc.getPageIndices());
+        front_page_brochurePages.forEach(p => mergedPdf.addPage(p));
+        console.log('front_page_brochure.pdf added');
 
         const doc = new jsPDF({
           unit: 'mm',
@@ -109,8 +92,13 @@
         let currentY = 30;
         let first = true;
 
-        for (const state in entriesByState) {
-          const rows = entriesByState[state].map(e => [e.station, e.address, e.name, e.contact, e.type]);
+        const sortedStates = Object.keys(entriesByState).sort();
+
+        for (const state of sortedStates) {
+          const sortedEntries = entriesByState[state].sort((a, b) => 
+            a.station.localeCompare(b.station)
+          );
+          const rows = sortedEntries.map(e => [e.station, e.address, e.name, e.contact, e.type]);
 
           if (!first && currentY + 50 > 270) {
             doc.addPage();
@@ -126,7 +114,7 @@
           doc.setFont("helvetica", "normal");
 
           doc.autoTable({
-            startY: currentY + 15, // Increased padding between header and table
+            startY: currentY + 15,
             head: [['STATION', 'ADDRESS', 'NAME', 'CONTACT NO', 'FACILITY TYPE']],
             body: rows,
             margin: { left: 10, right: 10 },
@@ -146,7 +134,7 @@
             }
           });
 
-          currentY += 20; // Spacing after the table (from previous request)
+          currentY += 20;
           first = false;
         }
 
@@ -154,53 +142,54 @@
         const tableDoc = await PDFLib.PDFDocument.load(tableBytes);
         const tablePages = await mergedPdf.copyPages(tableDoc, tableDoc.getPageIndices());
         tablePages.forEach(p => mergedPdf.addPage(p));
+        console.log('Table pages added');
 
-        const pdf2Bytes = await fetch('./pdf2.pdf').then(res => {
-          if (!res.ok) throw new Error(`Failed to fetch pdf2.pdf: ${res.statusText}`);
+        console.log('Fetching last_page_brochure.pdf...');
+        const last_page_brochureBytes = await fetch('./last_page_brochure.pdf').then(res => {
+          if (!res.ok) throw new Error(`Failed to fetch last_page_brochure.pdf: ${res.statusText}`);
           return res.arrayBuffer();
         });
-        const pdf2Doc = await PDFLib.PDFDocument.load(pdf2Bytes);
-        const pdf2Pages = await mergedPdf.copyPages(pdf2Doc, pdf2Doc.getPageIndices());
-        pdf2Pages.forEach(p => mergedPdf.addPage(p));
+        const last_page_brochureDoc = await PDFLib.PDFDocument.load(last_page_brochureBytes);
+        const last_page_brochurePages = await mergedPdf.copyPages(last_page_brochureDoc, last_page_brochureDoc.getPageIndices());
+        last_page_brochurePages.forEach(p => mergedPdf.addPage(p));
+        console.log('last_page_brochure.pdf added');
 
-        return await mergedPdf.save();
+        const finalPdf = await mergedPdf.save();
+        console.log('PDF generated successfully');
+        return finalPdf;
       } catch (error) {
+        console.error('Generate PDF error:', error);
         throw new Error(`Error generating PDF: ${error.message}`);
       }
     }
 
-    async function downloadPdf(pdfBytes) {
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `MaxTranstech_Offices_${new Date().toISOString().slice(0,10)}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }
-
     async function init() {
       const errorMessage = document.getElementById('errorMessage');
+      const instruction = document.getElementById('instruction');
+
       try {
+        console.log('Starting PDF generation...');
         const mergedPdfBytes = await generateMergedPdf();
         const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
-        
-        const pdfViewer = document.getElementById('pdfViewer');
-        pdfViewer.src = url;
+        console.log('Blob URL created:', url);
 
-        document.getElementById('downloadButton').addEventListener('click', () => downloadPdf(mergedPdfBytes));
+        // Trigger automatic download
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `MaxTranstech_Offices_${new Date().toISOString().slice(0,10)}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        console.log('Download triggered');
 
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        if (isMobile) {
-          downloadPdf(mergedPdfBytes);
-        }
+        // Show instruction
+        errorMessage.textContent = '';
+        instruction.style.display = 'block';
       } catch (error) {
-        console.error('Error:', error);
-        errorMessage.textContent = `Error loading PDF: ${error.message}. Please use the download button.`;
-        document.getElementById('downloadButton').style.display = 'block';
+        console.error('Init error:', error);
+        errorMessage.textContent = `Error loading PDF: ${error.message}`;
       }
     }
 
