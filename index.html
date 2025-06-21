@@ -387,13 +387,19 @@
                         const typeMap = {
                             'B': 'Booking',
                             'D': 'Delivery',
-                            'B/D': 'Booking & Delivery'
+                            'B/D': 'Booking & Delivery',
+                            'Booking': 'Booking',
+                            'Delivery': 'Delivery',
+                            'Booking & Delivery': 'Booking & Delivery',
+                            'Booking/Delivery': 'Booking & Delivery',
+                            'Transshipment Hub': 'Transshipment Hub'
                         };
                         const validTypes = [
                             'Booking', 'Delivery', 'Booking & Delivery',
                             'BOOKING', 'DELIVERY', 'BOOKING AND DELIVERY', 'BOOKING & DELIVERY',
-                            'B', 'D', 'B/D'
+                            'B', 'D', 'B/D', 'Booking/Delivery', 'Transshipment Hub'
                         ];
+
 
                         for (const row of json) {
                             let latitude = 0;
