@@ -85,13 +85,21 @@
                                     <input type="email" id="email" name="email" class="form-control">
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="type" class="form-label">TYPE</label>
-                                    <select id="type" name="type" class="form-select">
-                                        <option value="" disabled selected>Select Type</option>
+                                    <label for="facilityType" class="form-label">FACILITY TYPE</label>
+                                    <select id="facilityType" name="facilityType" class="form-select">
+                                        <option value="" disabled selected>Select Facility Type</option>
                                         <option value="Booking">Booking</option>
                                         <option value="Delivery">Delivery</option>
                                         <option value="Booking & Delivery">Booking & Delivery</option>
                                     </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="branchType" class="form-label">BRANCH TYPE</label>
+                                    <input type="text" id="branchType" name="branchType" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="vertical" class="form-label">VERTICAL</label>
+                                    <input type="text" id="vertical" name="vertical" class="form-control">
                                 </div>
                                 <div class="col-md-6">
                                     <label for="latitude" class="form-label">LATITUDE</label>
@@ -136,9 +144,9 @@
                             <th>NAME</th>
                             <th>CONTACT NO</th>
                             <th>EMAIL ID</th>
-                            <th>TYPE</th>
-<!--                             <th>LATITUDE</th>
-                            <th>LONGITUDE</th> -->
+                            <th>FACILITY TYPE</th>
+                            <th>BRANCH TYPE</th>
+                            <th>VERTICAL</th>
                             <th>ACTION</th>
                         </tr>
                     </thead>
@@ -180,7 +188,9 @@
                 document.getElementById('name').value = data.name;
                 document.getElementById('contact').value = data.contact;
                 document.getElementById('email').value = data.email;
-                document.getElementById('type').value = data.type;
+                document.getElementById('facilityType').value = data.facilityType;
+                document.getElementById('branchType').value = data.branchType || '';
+                document.getElementById('vertical').value = data.vertical || '';
                 document.getElementById('latitude').value = data.location.latitude;
                 document.getElementById('longitude').value = data.location.longitude;
                 submitButton.textContent = 'Update';
@@ -211,7 +221,7 @@
         async function loadTableData() {
             const tableBody = document.getElementById('tableBody');
             tableBody.innerHTML = '';
-            const snapshot = await db.collection('entries').get();
+            const snapshot = await db.collection('retail').get();
             const data = [];
             snapshot.forEach(doc => {
                 const entry = doc.data();
@@ -226,7 +236,9 @@
                     <td>${entry.name}</td>
                     <td>${entry.contact}</td>
                     <td>${entry.email}</td>
-                    <td>${entry.type || 'N/A'}</td>
+                    <td>${entry.facilityType || 'N/A'}</td>
+                    <td>${entry.branchType || 'N/A'}</td>
+                    <td>${entry.vertical || 'N/A'}</td>
                     <td class="action-icons">
                         <span class="text-primary me-2" data-id="${docId}" data-action="edit">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -265,7 +277,7 @@
             document.querySelectorAll('[data-action="edit"]').forEach(button => {
                 button.addEventListener('click', async (e) => {
                     const docId = e.target.closest('[data-id]').dataset.id;
-                    const doc = await db.collection('entries').doc(docId).get();
+                    const doc = await db.collection('retail').doc(docId).get();
                     const data = { ...doc.data(), docId };
                     openModal('edit', data);
                 });
@@ -276,7 +288,7 @@
                     const docId = e.target.closest('[data-id]').dataset.id;
                     if (confirm('Are you sure you want to delete this entry?')) {
                         try {
-                            await db.collection('entries').doc(docId).delete();
+                            await db.collection('retail').doc(docId).delete();
                             await loadTableData();
                             alert('Entry deleted successfully!');
                         } catch (error) {
@@ -292,7 +304,7 @@
         // Check if station exists and get its docId
         async function getStationDocId(station) {
             if (!station) return null;
-            const snapshot = await db.collection('entries').get();
+            const snapshot = await db.collection('retail').get();
             for (const doc of snapshot.docs) {
                 if (doc.data().station.toLowerCase() === station.toLowerCase()) {
                     return doc.id;
@@ -303,7 +315,7 @@
 
         // Delete all entries in Firestore
         async function deleteAllEntries() {
-            const snapshot = await db.collection('entries').get();
+            const snapshot = await db.collection('retail').get();
             const batch = db.batch();
             snapshot.forEach(doc => {
                 batch.delete(doc.ref);
@@ -329,7 +341,9 @@
             const name = document.getElementById('name').value.trim();
             const contact = document.getElementById('contact').value.trim();
             const email = document.getElementById('email').value.trim();
-            const type = document.getElementById('type').value;
+            const facilityType = document.getElementById('facilityType').value;
+            const branchType = document.getElementById('branchType').value.trim();
+            const vertical = document.getElementById('vertical').value.trim();
             const latitude = document.getElementById('latitude').value;
             const longitude = document.getElementById('longitude').value;
             const stationError = document.getElementById('stationError');
@@ -342,18 +356,18 @@
                 } else {
                     stationError.classList.add('d-none');
                     const formData = {
-                        station, district, state, address, name, contact, email, type,
+                        station, district, state, address, name, contact, email, facilityType, branchType, vertical,
                         location: { latitude: parseFloat(latitude), longitude: parseFloat(longitude) },
                         timestamp: firebase.firestore.FieldValue.serverTimestamp()
                     };
 
                     try {
                         if (editDocId) {
-                            await db.collection('entries').doc(editDocId).set(formData, { merge: true });
+                            await db.collection('retail').doc(editDocId).set(formData, { merge: true });
                             successes.push('Form data updated successfully!');
                             closeModal();
                         } else {
-                            await db.collection('entries').add(formData);
+                            await db.collection('retail').add(formData);
                             successes.push('Form data saved successfully!');
                             closeModal();
                         }
@@ -400,7 +414,6 @@
                             'B', 'D', 'B/D', 'Booking/Delivery', 'Transshipment Hub'
                         ];
 
-
                         for (const row of json) {
                             let latitude = 0;
                             let longitude = 0;
@@ -416,8 +429,8 @@
                                 }
                             }
 
-                            let typeValue = String(row.TYPE || row.type || '').trim();
-                            typeValue = typeMap[typeValue] || typeValue;
+                            let facilityTypeValue = String(row['FACILITY TYPE'] || row['facility type'] || row.TYPE || row.type || '').trim();
+                            facilityTypeValue = typeMap[facilityTypeValue] || facilityTypeValue;
 
                             const formData = {
                                 station: String(row.STATION || row.station || '').trim(),
@@ -427,8 +440,10 @@
                                 name: String(row.NAME || row.name || '').trim(),
                                 contact: String(row['CONTACT NO'] || row['contact no'] || row.CONTACT || row.contact || '').trim(),
                                 email: String(row['EMAIL ID'] || row['email id'] || row.EMAIL || row.email || '').trim(),
-                                type: typeValue,
-                                // location: { latitude, longitude },
+                                facilityType: facilityTypeValue,
+                                branchType: String(row['BRANCH TYPE'] || row['branch type'] || '').trim(),
+                                vertical: String(row.VERTICAL || row.vertical || '').trim(),
+                                location: { latitude, longitude },
                                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
                             };
 
@@ -436,13 +451,13 @@
                                 errors.push(`Excel: Missing or invalid fields in row: ${JSON.stringify(row)}`);
                                 continue;
                             }
-                            if (!validTypes.includes(formData.type)) {
-                                errors.push(`Excel: Invalid type in row: ${formData.type}. Must be one of: Booking, Delivery, Booking & Delivery, BOOKING, DELIVERY, BOOKING AND DELIVERY, B, D, B/D`);
+                            if (!validTypes.includes(formData.facilityType)) {
+                                errors.push(`Excel: Invalid facility type in row: ${formData.facilityType}. Must be one of: Booking, Delivery, Booking & Delivery, BOOKING, DELIVERY, BOOKING AND DELIVERY, B, D, B/D`);
                                 continue;
                             }
 
                             try {
-                                await db.collection('entries').add(formData);
+                                await db.collection('retail').add(formData);
                                 successes.push(`Excel: Added station "${formData.station}"`);
                             } catch (error) {
                                 errors.push(`Excel: Error saving row for station "${formData.station}": ${error.message}`);
@@ -486,8 +501,10 @@
                 NAME: row.name,
                 'CONTACT NO': row.contact,
                 'EMAIL ID': row.email,
-                TYPE: row.type || 'N/A'
-                // LOCATION: `${row.location.latitude},${row.location.longitude}`
+                'FACILITY TYPE': row.facilityType || 'N/A',
+                'BRANCH TYPE': row.branchType || 'N/A',
+                VERTICAL: row.vertical || 'N/A',
+                LOCATION: `${row.location.latitude},${row.location.longitude}`
             })));
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, 'Entries');
